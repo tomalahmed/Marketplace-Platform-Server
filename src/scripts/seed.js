@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User.model");
 const Prompt = require("../models/Prompt.model");
+const Review = require("../models/Review.model");
+const updatePromptRating = require("../utils/updatePromptRating");
 const seedData = require("../data/seed-data.json");
 
 const DEFAULT_PASSWORD = seedData.meta?.defaultPassword || "Demo@12345";
@@ -115,6 +117,46 @@ async function seedPrompts() {
   return upserted;
 }
 
+async function seedReviews() {
+  if (!Array.isArray(seedData.reviews) || seedData.reviews.length === 0) {
+    return 0;
+  }
+
+  let upserted = 0;
+  const promptIds = new Set();
+
+  for (const review of seedData.reviews) {
+    const reviewId = toId(review._id);
+    const userId = toId(review.user);
+    const promptId = toId(review.prompt);
+    promptIds.add(String(promptId));
+
+    await Review.findOneAndUpdate(
+      { user: userId, prompt: promptId },
+      {
+        $set: {
+          rating: review.rating,
+          comment: review.comment,
+          user: userId,
+          prompt: promptId,
+        },
+        $setOnInsert: {
+          _id: reviewId,
+          createdAt: review.createdAt ? new Date(review.createdAt) : undefined,
+        },
+      },
+      { upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+    upserted += 1;
+  }
+
+  for (const promptId of promptIds) {
+    await updatePromptRating(promptId);
+  }
+
+  return upserted;
+}
+
 async function syncCreatorPromptCounts() {
   for (const user of seedData.users) {
     const count = await Prompt.countDocuments({ creator: toId(user._id) });
@@ -142,10 +184,12 @@ async function runSeed() {
 
   const userCount = await seedUsers();
   const promptCount = await seedPrompts();
+  const reviewCount = await seedReviews();
   await syncCreatorPromptCounts();
 
   console.log(`Seeded ${userCount} users`);
   console.log(`Seeded ${promptCount} prompts`);
+  console.log(`Seeded ${reviewCount} reviews`);
   console.log("");
   console.log("Demo login credentials (all seeded users):");
   console.log(`  Password: ${DEFAULT_PASSWORD}`);

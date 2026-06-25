@@ -5,6 +5,9 @@ const cookieParser = require("cookie-parser");
 const errorHandler = require("./middlewares/errorHandler");
 const authRoutes = require("./routes/auth.routes");
 const promptRoutes = require("./routes/prompt.routes");
+const bookmarkRoutes = require("./routes/bookmark.routes");
+const reviewRoutes = require("./routes/review.routes");
+const reportRoutes = require("./routes/report.routes");
 
 const app = express();
 
@@ -24,6 +27,9 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/prompts", promptRoutes);
+app.use("/api/bookmarks", bookmarkRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/reports", reportRoutes);
 
 app.use(errorHandler);
 

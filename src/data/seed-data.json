@@ -96,6 +96,32 @@
       "updatedAt": "2026-04-12T11:05:00.000Z"
     }
   ],
+  "reviews": [
+    {
+      "_id": "660ad3e4e67f0d1111111111",
+      "user": "660ad1b2c45e8b2222222222",
+      "prompt": "660ad2c3d56f9c2222222222",
+      "rating": 5,
+      "comment": "Excellent prompt! Saved me hours of brainstorming. The structure it provides is exactly what I needed for our new product launch visuals.",
+      "createdAt": "2026-03-10T14:20:00.000Z"
+    },
+    {
+      "_id": "660ad3e4e67f0d2222222222",
+      "user": "660ad1b2c45e8b3333333333",
+      "prompt": "660ad2c3d56f9c1111111111",
+      "rating": 5,
+      "comment": "PromptGrowth cut my content workflow in half. The architecture prompts are incredibly detailed and save hours of trial and error.",
+      "createdAt": "2026-03-12T09:15:00.000Z"
+    },
+    {
+      "_id": "660ad3e4e67f0d3333333333",
+      "user": "660ad1b2c45e8b1111111111",
+      "prompt": "660ad2c3d56f9c3333333333",
+      "rating": 4,
+      "comment": "Very solid SQL optimization framework. Had to tweak the output a bit for our legacy schema, but the foundation it gives is incredibly strong.",
+      "createdAt": "2026-03-08T18:45:00.000Z"
+    }
+  ],
   "meta": {
     "defaultPassword": "Demo@12345",
     "note": "Bookmarks, reviews, reports, and payments are stored here for Phase 3+ models. Review stats are applied to prompts directly."
