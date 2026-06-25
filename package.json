@@ -1,25 +1,50 @@
 {
   "name": "marketplace-platform-server",
   "version": "1.0.0",
-  "description": "",
+  "description": "Express API for PromptGrowth — AI prompt marketplace (auth, prompts, JWT cookies, MongoDB)",
   "main": "server.js",
+  "private": true,
+  "type": "commonjs",
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "seed": "node src/scripts/seed.js",
+    "health": "node -e \"require('http').get('http://localhost:' + (process.env.PORT || 5000) + '/api/health', (r) => { let d = ''; r.on('data', (c) => d += c); r.on('end', () => console.log(d)); }).on('error', (e) => { console.error(e.message); process.exit(1); })\""
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tomalahmed/studynook-server.git"
+    "url": "git+https://github.com/tomalahmed/Marketplace-Platform-Server.git"
   },
-  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/tomalahmed/Marketplace-Platform-Server/issues"
+  },
+  "homepage": "https://github.com/tomalahmed/Marketplace-Platform-Server#readme",
+  "keywords": [
+    "express",
+    "mongodb",
+    "mongoose",
+    "jwt",
+    "marketplace",
+    "ai-prompts",
+    "promptgrowth",
+    "rest-api"
+  ],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/tomalahmed/studynook-server/issues"
+  "engines": {
+    "node": ">=18.0.0"
   },
-  "homepage": "https://github.com/tomalahmed/studynook-server#readme",
+  "nodemonConfig": {
+    "watch": [
+      "server.js",
+      "src"
+    ],
+    "ext": "js,json",
+    "ignore": [
+      "src/data/**",
+      "node_modules/**"
+    ]
+  },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",

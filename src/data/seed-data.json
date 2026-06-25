@@ -1,0 +1,103 @@
+{
+  "users": [
+    {
+      "_id": "660ad1b2c45e8b1111111111",
+      "name": "Alex Mercer",
+      "email": "alex.mercer@dev.com",
+      "photoURL": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
+      "role": "creator",
+      "isPremium": true,
+      "promptCount": 2,
+      "createdAt": "2026-01-15T08:30:00.000Z",
+      "updatedAt": "2026-01-15T08:30:00.000Z"
+    },
+    {
+      "_id": "660ad1b2c45e8b2222222222",
+      "name": "Sarah Connor",
+      "email": "sarah.c@freeuser.io",
+      "photoURL": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
+      "role": "user",
+      "isPremium": false,
+      "promptCount": 1,
+      "createdAt": "2026-02-20T14:15:00.000Z",
+      "updatedAt": "2026-02-20T14:15:00.000Z"
+    },
+    {
+      "_id": "660ad1b2c45e8b3333333333",
+      "name": "Elena Rostova",
+      "email": "elena.admin@promptmarket.com",
+      "photoURL": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80",
+      "role": "admin",
+      "isPremium": true,
+      "promptCount": 0,
+      "createdAt": "2025-12-01T09:00:00.000Z",
+      "updatedAt": "2025-12-01T09:00:00.000Z"
+    }
+  ],
+  "prompts": [
+    {
+      "_id": "660ad2c3d56f9c1111111111",
+      "creator": "660ad1b2c45e8b1111111111",
+      "title": "Production-Ready Microservices Architect",
+      "description": "Transforms high-level system requirements into highly scalable Dockerized Node.js and Go microservice architectures, including API gateway routing structures.",
+      "content": "Act as a Principal Software Architect. Design a resilient microservice ecosystem for the following specification: [Insert Tech Stack/Requirements]. Provide structural folder scaffolding, Docker Compose orchestration files, and Redis caching layers.",
+      "category": "Coding",
+      "aiTool": "ChatGPT",
+      "tags": ["backend", "architecture", "docker", "microservices"],
+      "difficulty": "Pro",
+      "visibility": "private",
+      "status": "approved",
+      "featured": true,
+      "copyCount": 142,
+      "averageRating": 0,
+      "reviewCount": 0,
+      "rejectionFeedback": "",
+      "createdAt": "2026-03-01T10:00:00.000Z",
+      "updatedAt": "2026-03-01T10:00:00.000Z"
+    },
+    {
+      "_id": "660ad2c3d56f9c2222222222",
+      "creator": "660ad1b2c45e8b1111111111",
+      "title": "Cyberpunk Cinematic Street Photography",
+      "description": "Generates moody, neon-drenched rainy street scenes emphasizing atmospheric depth, reflections, and cinematic anamorphics.",
+      "content": "Cinematic shot of a neon-lit cyberpunk alleyway in Neo-Tokyo, pouring rain, photorealistic hyper-detailed textures, reflections on asphalt, shot on 35mm lens, corporate neon signage overhead, cyberpunk color grading, corporate blues and hot pinks --ar 16:9 --style raw --v 6.0",
+      "category": "Creative",
+      "aiTool": "Midjourney",
+      "tags": ["cyberpunk", "cinematic", "neon", "street photography"],
+      "difficulty": "Intermediate",
+      "visibility": "public",
+      "status": "approved",
+      "featured": true,
+      "copyCount": 890,
+      "averageRating": 5,
+      "reviewCount": 1,
+      "rejectionFeedback": "",
+      "createdAt": "2026-03-05T18:24:00.000Z",
+      "updatedAt": "2026-03-05T18:24:00.000Z"
+    },
+    {
+      "_id": "660ad2c3d56f9c3333333333",
+      "creator": "660ad1b2c45e8b2222222222",
+      "title": "Automated SQL Query Optimization Genius",
+      "description": "Analyzes poorly performing legacy SQL strings and suggests complex index definitions and rewrites to prevent nested table scans.",
+      "content": "Analyze this exact raw query structure for bottlenecks: [Insert SQL]. Identify where indexing is missing and rewrite using clear INNER JOIN maps instead of nested subqueries.",
+      "category": "Coding",
+      "aiTool": "Claude",
+      "tags": ["database", "sql", "optimization"],
+      "difficulty": "Intermediate",
+      "visibility": "public",
+      "status": "pending",
+      "featured": false,
+      "copyCount": 0,
+      "averageRating": 0,
+      "reviewCount": 0,
+      "rejectionFeedback": "Awaiting baseline evaluation and validation tests from the engineering team review.",
+      "createdAt": "2026-04-12T11:05:00.000Z",
+      "updatedAt": "2026-04-12T11:05:00.000Z"
+    }
+  ],
+  "meta": {
+    "defaultPassword": "Demo@12345",
+    "note": "Bookmarks, reviews, reports, and payments are stored here for Phase 3+ models. Review stats are applied to prompts directly."
+  }
+}
