@@ -87,21 +87,24 @@ exports.getPromptById = async (req, res, next) => {
     const isOwner = req.user && String(prompt.creator._id) === String(req.user.id);
     const isAdmin = req.user && req.user.role === "admin";
 
+    const promptData = prompt.toObject();
+    let contentLocked = false;
+
     if (prompt.visibility === "private" && !isOwner && !isAdmin) {
       const userDoc = await User.findById(req.user.id);
       if (!userDoc || !userDoc.isPremium) {
-        return res.status(403).json({
-          success: false,
-          message: "Premium access required to view this prompt",
-          contentLocked: true,
-          lockReason: "premium_required",
-        });
+        contentLocked = true;
+        promptData.contentPreview = prompt.content.slice(0, 180);
+        promptData.content = null;
       }
     }
 
     res.status(200).json({
       success: true,
-      data: prompt,
+      data: {
+        ...promptData,
+        contentLocked,
+      },
     });
   } catch (error) {
     next(error);
