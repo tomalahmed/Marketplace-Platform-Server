@@ -9,6 +9,8 @@ const updatePromptRating = require("../utils/updatePromptRating");
 const seedData = require("../data/seed-data.json");
 
 const DEFAULT_PASSWORD = seedData.meta?.defaultPassword || "Demo@12345";
+const { getRealAdminConfig } = require("../config/realAdmin");
+const { seedRealAdmin } = require("./seedRealAdmin");
 
 function toId(value) {
   return new mongoose.Types.ObjectId(value);
@@ -187,16 +189,33 @@ async function runSeed() {
   const reviewCount = await seedReviews();
   await syncCreatorPromptCounts();
 
+  const realAdminResult = await seedRealAdmin();
+
   console.log(`Seeded ${userCount} users`);
   console.log(`Seeded ${promptCount} prompts`);
   console.log(`Seeded ${reviewCount} reviews`);
   console.log("");
-  console.log("Demo login credentials (all seeded users):");
+  console.log("Demo login credentials (sandbox-scoped accounts):");
   console.log(`  Password: ${DEFAULT_PASSWORD}`);
   console.log("");
   seedData.users.forEach((user) => {
     console.log(`  ${user.role.padEnd(7)} → ${user.email}`);
   });
+
+  const realAdminConfig = getRealAdminConfig();
+  console.log("");
+  if (realAdminResult.skipped) {
+    console.log("Real platform admin: skipped");
+    console.log(`  ${realAdminResult.reason}`);
+    if (!realAdminConfig.hasEmail) {
+      console.log("  Set REAL_ADMIN_EMAIL and REAL_ADMIN_PASSWORD in .env, then run: npm run seed:admin");
+    }
+  } else if (realAdminResult.user) {
+    console.log("Real platform admin (full data access, not demo-scoped):");
+    console.log(`  Email: ${realAdminResult.user.email}`);
+    console.log(`  Name:  ${realAdminResult.user.name}`);
+    console.log("  Password: (from REAL_ADMIN_PASSWORD in .env)");
+  }
   console.log("");
   console.log("Approved public prompts will appear on /prompts and landing featured.");
   console.log("Private premium prompt requires isPremium user to view full content.");
