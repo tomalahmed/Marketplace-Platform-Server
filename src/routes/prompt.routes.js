@@ -17,16 +17,17 @@ const {
 } = require("../controllers/prompt.controller");
 const verifyToken = require("../middlewares/verifyToken");
 const verifyRole = require("../middlewares/verifyRole");
+const optionalAuth = require("../middlewares/optionalAuth");
 
 // ===== PUBLIC ROUTES (no authentication required) =====
 
 // Get all approved public prompts with filters, search, sort, pagination
 // GET /api/prompts?search=&category=&aiTool=&difficulty=&sort=&page=&limit=
-router.get("/", getAllPrompts);
+router.get("/", optionalAuth, getAllPrompts);
 
-router.get("/featured", getFeatured);
+router.get("/featured", optionalAuth, getFeatured);
 
-router.get("/top-creators", getTopCreators);
+router.get("/top-creators", optionalAuth, getTopCreators);
 
 router.get("/me/mine", verifyToken, getMyPrompts);
 

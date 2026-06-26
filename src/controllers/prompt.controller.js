@@ -1,6 +1,13 @@
 const Prompt = require("../models/Prompt.model");
 const User = require("../models/User.model");
 const ApiFeatures = require("../utils/apiFeatures");
+const {
+  applyDemoCreatorFilter,
+  assertPromptVisibleToViewer,
+  getDemoUserIds,
+  isDemoViewer,
+  isPromptInDemoScope,
+} = require("../utils/demoScope");
 
 // @desc Get top creators by total copies and prompt count
 // @access Public
@@ -9,8 +16,14 @@ exports.getTopCreators = async (req, res, next) => {
   try {
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 5, 1), 20);
 
+    const matchStage = { status: "approved" };
+    if (isDemoViewer(req)) {
+      const demoUserIds = await getDemoUserIds();
+      matchStage.creator = { $in: demoUserIds };
+    }
+
     const creators = await Prompt.aggregate([
-      { $match: { status: "approved" } },
+      { $match: matchStage },
       {
         $group: {
           _id: "$creator",
@@ -103,7 +116,7 @@ exports.getAdminPrompts = async (req, res, next) => {
     const status = req.query.status;
     const search = req.query.search?.trim();
 
-    const filter = {};
+    const filter = await applyDemoCreatorFilter({}, req);
     if (status) filter.status = status;
     if (search) {
       filter.$or = [
@@ -145,10 +158,13 @@ exports.getAdminPrompts = async (req, res, next) => {
 // @route GET /api/prompts
 exports.getAllPrompts = async (req, res, next) => {
   try {
-    const baseMatch = {
-      status: "approved",
-      visibility: "public",
-    };
+    const baseMatch = await applyDemoCreatorFilter(
+      {
+        status: "approved",
+        visibility: "public",
+      },
+      req
+    );
 
     const countQuery = Prompt.find(baseMatch);
     const countFeatures = new ApiFeatures(countQuery, req.query);
@@ -181,11 +197,16 @@ exports.getAllPrompts = async (req, res, next) => {
 // @access Public
 exports.getFeatured = async (req, res, next) => {
   try {
-    const prompts = await Prompt.find({
-      status: "approved",
-      visibility: "public",
-      featured: true,
-    })
+    const featuredFilter = await applyDemoCreatorFilter(
+      {
+        status: "approved",
+        visibility: "public",
+        featured: true,
+      },
+      req
+    );
+
+    const prompts = await Prompt.find(featuredFilter)
       .limit(6)
       .populate("creator", "name email photoURL")
       .sort({ createdAt: -1 });
@@ -219,6 +240,14 @@ exports.getPromptById = async (req, res, next) => {
     );
 
     if (!prompt) {
+      return res.status(404).json({
+        success: false,
+        message: "Prompt not found",
+      });
+    }
+
+    const canView = await assertPromptVisibleToViewer(req, prompt);
+    if (!canView) {
       return res.status(404).json({
         success: false,
         message: "Prompt not found",
@@ -514,6 +543,14 @@ exports.incrementCopy = async (req, res, next) => {
       });
     }
 
+    const canView = await assertPromptVisibleToViewer(req, prompt);
+    if (!canView) {
+      return res.status(404).json({
+        success: false,
+        message: "Prompt not found",
+      });
+    }
+
     // Check if user can access content
     const isOwner = String(prompt.creator) === String(req.user.id);
     const isAdmin = req.user.role === "admin";
@@ -558,18 +595,27 @@ exports.approvePrompt = async (req, res, next) => {
       });
     }
 
-    const prompt = await Prompt.findByIdAndUpdate(
-      id,
-      { status: "approved", rejectionFeedback: "" },
-      { new: true }
-    ).populate("creator", "name email promptCount");
+    const existingPrompt = await Prompt.findById(id);
 
-    if (!prompt) {
+    if (!existingPrompt) {
       return res.status(404).json({
         success: false,
         message: "Prompt not found",
       });
     }
+
+    if (isDemoViewer(req) && !(await isPromptInDemoScope(existingPrompt))) {
+      return res.status(404).json({
+        success: false,
+        message: "Prompt not found",
+      });
+    }
+
+    const prompt = await Prompt.findByIdAndUpdate(
+      id,
+      { status: "approved", rejectionFeedback: "" },
+      { new: true }
+    ).populate("creator", "name email promptCount");
 
     res.status(200).json({
       success: true,
@@ -600,6 +646,22 @@ exports.rejectPrompt = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         message: "Rejection feedback is required",
+      });
+    }
+
+    const existingPrompt = await Prompt.findById(id);
+
+    if (!existingPrompt) {
+      return res.status(404).json({
+        success: false,
+        message: "Prompt not found",
+      });
+    }
+
+    if (isDemoViewer(req) && !(await isPromptInDemoScope(existingPrompt))) {
+      return res.status(404).json({
+        success: false,
+        message: "Prompt not found",
       });
     }
 
@@ -643,6 +705,13 @@ exports.featurePrompt = async (req, res, next) => {
     const prompt = await Prompt.findById(id);
 
     if (!prompt) {
+      return res.status(404).json({
+        success: false,
+        message: "Prompt not found",
+      });
+    }
+
+    if (isDemoViewer(req) && !(await isPromptInDemoScope(prompt))) {
       return res.status(404).json({
         success: false,
         message: "Prompt not found",

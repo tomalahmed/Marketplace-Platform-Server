@@ -2,6 +2,11 @@ const Review = require("../models/Review.model");
 const Prompt = require("../models/Prompt.model");
 const User = require("../models/User.model");
 const updatePromptRating = require("../utils/updatePromptRating");
+const {
+  assertPromptVisibleToViewer,
+  getDemoUserIds,
+  isDemoViewer,
+} = require("../utils/demoScope");
 
 const isValidObjectId = (id) => id && /^[0-9a-fA-F]{24}$/.test(id);
 
@@ -31,6 +36,11 @@ exports.createReview = async (req, res, next) => {
 
     const prompt = await Prompt.findById(promptId);
     if (!prompt) {
+      return res.status(404).json({ success: false, message: "Prompt not found" });
+    }
+
+    const canView = await assertPromptVisibleToViewer(req, prompt);
+    if (!canView) {
       return res.status(404).json({ success: false, message: "Prompt not found" });
     }
 
@@ -94,6 +104,16 @@ exports.getPromptReviews = async (req, res, next) => {
 
     if (!isValidObjectId(promptId)) {
       return res.status(400).json({ success: false, message: "Invalid prompt ID" });
+    }
+
+    const prompt = await Prompt.findById(promptId);
+    if (!prompt) {
+      return res.status(404).json({ success: false, message: "Prompt not found" });
+    }
+
+    const canView = await assertPromptVisibleToViewer(req, prompt);
+    if (!canView) {
+      return res.status(404).json({ success: false, message: "Prompt not found" });
     }
 
     const [reviews, total] = await Promise.all([
@@ -163,7 +183,16 @@ exports.getRecentReviews = async (req, res, next) => {
   try {
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 3, 1), 12);
 
-    const reviews = await Review.find()
+    let reviewFilter = {};
+    if (isDemoViewer(req)) {
+      const demoUserIds = await getDemoUserIds();
+      const demoPromptIds = await Prompt.find({
+        creator: { $in: demoUserIds },
+      }).distinct("_id");
+      reviewFilter = { prompt: { $in: demoPromptIds } };
+    }
+
+    const reviews = await Review.find(reviewFilter)
       .sort({ createdAt: -1 })
       .limit(limit)
       .populate("user", "name email photoURL")

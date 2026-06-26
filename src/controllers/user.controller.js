@@ -5,6 +5,13 @@ const Review = require("../models/Review.model");
 const Bookmark = require("../models/Bookmark.model");
 const Payment = require("../models/Payment.model");
 const Report = require("../models/Report.model");
+const {
+  DEMO_EMAILS,
+  applyDemoUserFilter,
+  getDemoUserIds,
+  isDemoEmail,
+  isDemoViewer,
+} = require("../utils/demoScope");
 
 const isValidObjectId = (id) => id && /^[0-9a-fA-F]{24}$/.test(id);
 
@@ -165,14 +172,30 @@ exports.getCreatorAnalytics = async (req, res, next) => {
 
 exports.getAdminAnalytics = async (req, res, next) => {
   try {
+    const demoScope = isDemoViewer(req);
+    const userFilter = demoScope ? { email: { $in: DEMO_EMAILS } } : {};
+    const demoUserIds = demoScope ? await getDemoUserIds() : [];
+    const promptFilter = demoScope ? { creator: { $in: demoUserIds } } : {};
+    const demoPromptIds = demoScope
+      ? await Prompt.find(promptFilter).distinct("_id")
+      : [];
+    const reviewFilter = demoScope ? { prompt: { $in: demoPromptIds } } : {};
+    const reportFilter = demoScope ? { prompt: { $in: demoPromptIds }, status: "pending" } : { status: "pending" };
+    const paymentFilter = demoScope
+      ? { status: "paid", email: { $in: DEMO_EMAILS } }
+      : { status: "paid" };
+
     const [userCount, promptCount, reviewCount, copyStats, paymentStats, reportCount] =
       await Promise.all([
-        User.countDocuments(),
-        Prompt.countDocuments(),
-        Review.countDocuments(),
-        Prompt.aggregate([{ $group: { _id: null, totalCopies: { $sum: "$copyCount" } } }]),
+        User.countDocuments(userFilter),
+        Prompt.countDocuments(promptFilter),
+        Review.countDocuments(reviewFilter),
+        Prompt.aggregate([
+          ...(demoScope ? [{ $match: promptFilter }] : []),
+          { $group: { _id: null, totalCopies: { $sum: "$copyCount" } } },
+        ]),
         Payment.aggregate([
-          { $match: { status: "paid" } },
+          { $match: paymentFilter },
           {
             $group: {
               _id: null,
@@ -181,14 +204,16 @@ exports.getAdminAnalytics = async (req, res, next) => {
             },
           },
         ]),
-        Report.countDocuments({ status: "pending" }),
+        Report.countDocuments(reportFilter),
       ]);
 
     const promptsByStatus = await Prompt.aggregate([
+      ...(demoScope ? [{ $match: promptFilter }] : []),
       { $group: { _id: "$status", count: { $sum: 1 } } },
     ]);
 
     const usersByRole = await User.aggregate([
+      ...(demoScope ? [{ $match: userFilter }] : []),
       { $group: { _id: "$role", count: { $sum: 1 } } },
     ]);
 
@@ -227,7 +252,7 @@ exports.getAllUsers = async (req, res, next) => {
     const role = req.query.role;
     const search = req.query.search?.trim();
 
-    const filter = {};
+    const filter = await applyDemoUserFilter({}, req);
     if (role) filter.role = role;
     if (search) {
       filter.$or = [
@@ -280,20 +305,29 @@ exports.updateUserRole = async (req, res, next) => {
       });
     }
 
-    const user = await User.findByIdAndUpdate(
-      id,
-      { role },
-      { new: true, runValidators: true }
-    );
+    const user = await User.findById(id);
 
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
+    if (isDemoViewer(req) && !isDemoEmail(user.email)) {
+      return res.status(403).json({
+        success: false,
+        message: "Demo admin can only manage demo accounts",
+      });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { role },
+      { new: true, runValidators: true }
+    );
+
     return res.status(200).json({
       success: true,
       message: "User role updated",
-      data: user,
+      data: updatedUser,
     });
   } catch (error) {
     return next(error);
@@ -315,11 +349,20 @@ exports.deleteUser = async (req, res, next) => {
       });
     }
 
-    const user = await User.findByIdAndDelete(id);
+    const user = await User.findById(id);
 
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
+
+    if (isDemoViewer(req) && !isDemoEmail(user.email)) {
+      return res.status(403).json({
+        success: false,
+        message: "Demo admin can only manage demo accounts",
+      });
+    }
+
+    await User.findByIdAndDelete(id);
 
     return res.status(200).json({
       success: true,

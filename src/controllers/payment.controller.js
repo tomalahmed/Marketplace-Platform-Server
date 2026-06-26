@@ -1,4 +1,5 @@
 const User = require("../models/User.model");
+const { DEMO_EMAILS, isDemoViewer } = require("../utils/demoScope");
 const Payment = require("../models/Payment.model");
 const { stripe, PREMIUM_PRICE_CENTS } = require("../config/stripe");
 
@@ -152,6 +153,9 @@ exports.getAllPayments = async (req, res, next) => {
     const filter = {};
     if (status) {
       filter.status = status;
+    }
+    if (isDemoViewer(req)) {
+      filter.email = { $in: DEMO_EMAILS };
     }
 
     const [payments, total] = await Promise.all([

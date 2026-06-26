@@ -1,6 +1,11 @@
 const Report = require("../models/Report.model");
 const Prompt = require("../models/Prompt.model");
 const User = require("../models/User.model");
+const {
+  DEMO_EMAILS,
+  getDemoUserIds,
+  isDemoViewer,
+} = require("../utils/demoScope");
 
 const isValidObjectId = (id) => id && /^[0-9a-fA-F]{24}$/.test(id);
 
@@ -64,6 +69,14 @@ exports.getAllReports = async (req, res, next) => {
     const filter = {};
     if (status) {
       filter.status = status;
+    }
+
+    if (isDemoViewer(req)) {
+      const demoUserIds = await getDemoUserIds();
+      const demoPromptIds = await Prompt.find({
+        creator: { $in: demoUserIds },
+      }).distinct("_id");
+      filter.prompt = { $in: demoPromptIds };
     }
 
     const [reports, total] = await Promise.all([
