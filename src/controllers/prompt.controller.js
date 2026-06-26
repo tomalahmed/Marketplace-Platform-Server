@@ -8,6 +8,11 @@ const {
   isDemoViewer,
   isPromptInDemoScope,
 } = require("../utils/demoScope");
+const {
+  sanitizePromptForViewer,
+  sanitizePromptsForViewer,
+  enrichViewerFromRequest,
+} = require("../utils/promptVisibility");
 
 // @desc Get top creators by total copies and prompt count
 // @access Public
@@ -161,7 +166,6 @@ exports.getAllPrompts = async (req, res, next) => {
     const baseMatch = await applyDemoCreatorFilter(
       {
         status: "approved",
-        visibility: "public",
       },
       req
     );
@@ -178,7 +182,8 @@ exports.getAllPrompts = async (req, res, next) => {
     const features = new ApiFeatures(listQuery, req.query);
     features.search().filter().sort().paginate();
 
-    const prompts = await features.query;
+    const viewer = await enrichViewerFromRequest(req, User);
+    const prompts = sanitizePromptsForViewer(await features.query, viewer);
     const paginationInfo = await features.getPaginationInfo(total);
 
     res.status(200).json({
@@ -200,16 +205,19 @@ exports.getFeatured = async (req, res, next) => {
     const featuredFilter = await applyDemoCreatorFilter(
       {
         status: "approved",
-        visibility: "public",
         featured: true,
       },
       req
     );
 
-    const prompts = await Prompt.find(featuredFilter)
-      .limit(6)
-      .populate("creator", "name email photoURL")
-      .sort({ createdAt: -1 });
+    const viewer = await enrichViewerFromRequest(req, User);
+    const prompts = sanitizePromptsForViewer(
+      await Prompt.find(featuredFilter)
+        .limit(6)
+        .populate("creator", "name email photoURL")
+        .sort({ createdAt: -1 }),
+      viewer
+    );
 
     res.status(200).json({
       success: true,
@@ -255,27 +263,12 @@ exports.getPromptById = async (req, res, next) => {
     }
 
     // Check visibility and permission for private prompts
-    const isOwner = req.user && String(prompt.creator._id) === String(req.user.id);
-    const isAdmin = req.user && req.user.role === "admin";
-
-    const promptData = prompt.toObject();
-    let contentLocked = false;
-
-    if (prompt.visibility === "private" && !isOwner && !isAdmin) {
-      const userDoc = await User.findById(req.user.id);
-      if (!userDoc || !userDoc.isPremium) {
-        contentLocked = true;
-        promptData.contentPreview = prompt.content.slice(0, 180);
-        promptData.content = null;
-      }
-    }
+    const viewer = await enrichViewerFromRequest(req, User);
+    const promptData = sanitizePromptForViewer(prompt, viewer);
 
     res.status(200).json({
       success: true,
-      data: {
-        ...promptData,
-        contentLocked,
-      },
+      data: promptData,
     });
   } catch (error) {
     next(error);
@@ -574,7 +567,9 @@ exports.incrementCopy = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Prompt copied successfully",
-      data: updatedPrompt,
+      data: {
+        copyCount: updatedPrompt.copyCount,
+      },
     });
   } catch (error) {
     next(error);

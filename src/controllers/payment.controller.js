@@ -54,7 +54,7 @@ exports.createCheckoutSession = async (req, res, next) => {
           },
         },
       ],
-      success_url: `${clientUrl}/pricing?payment=success`,
+      success_url: `${clientUrl}/pricing?payment=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${clientUrl}/pricing?payment=cancelled`,
     });
 
@@ -103,41 +103,96 @@ exports.handleWebhook = async (req, res, next) => {
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
-      const userId = session.metadata?.userId || session.client_reference_id;
-
-      if (!userId) {
-        return res.status(400).json({
-          success: false,
-          message: "Missing user reference on checkout session",
-        });
-      }
-
-      const existingPayment = await Payment.findOne({
-        stripeSessionId: session.id,
-      });
-
-      if (!existingPayment) {
-        await Payment.create({
-          user: userId,
-          stripeSessionId: session.id,
-          stripePaymentIntentId: session.payment_intent || "",
-          email: session.customer_details?.email || session.customer_email || "",
-          amount: session.amount_total || PREMIUM_PRICE_CENTS,
-          status: "paid",
-          paidAt: new Date(),
-        });
-      } else if (existingPayment.status !== "paid") {
-        existingPayment.status = "paid";
-        existingPayment.paidAt = new Date();
-        existingPayment.stripePaymentIntentId =
-          session.payment_intent || existingPayment.stripePaymentIntentId;
-        await existingPayment.save();
-      }
-
-      await User.findByIdAndUpdate(userId, { isPremium: true });
+      await grantPremiumFromSession(session);
     }
 
     return res.status(200).json({ received: true });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+async function grantPremiumFromSession(session) {
+  const userId = session.metadata?.userId || session.client_reference_id;
+
+  if (!userId) {
+    throw new Error("Missing user reference on checkout session");
+  }
+
+  const existingPayment = await Payment.findOne({
+    stripeSessionId: session.id,
+  });
+
+  if (!existingPayment) {
+    await Payment.create({
+      user: userId,
+      stripeSessionId: session.id,
+      stripePaymentIntentId: session.payment_intent || "",
+      email: session.customer_details?.email || session.customer_email || "",
+      amount: session.amount_total || PREMIUM_PRICE_CENTS,
+      status: "paid",
+      paidAt: new Date(),
+    });
+  } else if (existingPayment.status !== "paid") {
+    existingPayment.status = "paid";
+    existingPayment.paidAt = new Date();
+    existingPayment.stripePaymentIntentId =
+      session.payment_intent || existingPayment.stripePaymentIntentId;
+    await existingPayment.save();
+  }
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { isPremium: true },
+    { new: true }
+  ).select("-password");
+
+  return user;
+}
+
+exports.verifyCheckoutSession = async (req, res, next) => {
+  try {
+    if (!stripe) {
+      return res.status(503).json({
+        success: false,
+        message: "Stripe is not configured on the server",
+      });
+    }
+
+    const sessionId = req.body?.sessionId;
+
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        message: "sessionId is required",
+      });
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status !== "paid") {
+      return res.status(400).json({
+        success: false,
+        message: "Payment has not been completed yet",
+      });
+    }
+
+    const sessionUserId = session.metadata?.userId || session.client_reference_id;
+
+    if (String(sessionUserId) !== String(req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        message: "Checkout session does not belong to this account",
+      });
+    }
+
+    const user = await grantPremiumFromSession(session);
+
+    return res.status(200).json({
+      success: true,
+      message: "Premium activated",
+      data: user,
+    });
   } catch (error) {
     return next(error);
   }

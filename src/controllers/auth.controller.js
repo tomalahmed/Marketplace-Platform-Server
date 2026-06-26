@@ -151,17 +151,19 @@ const googleSync = async (req, res, next) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
+    const updateFields = {
+      name: name.trim(),
+      email: normalizedEmail,
+      photoURL: photoURL?.trim() || "",
+      firebaseUid,
+    };
+
     const user = await User.findOneAndUpdate(
       { email: normalizedEmail },
       {
-        $set: {
-          name: name.trim(),
-          email: normalizedEmail,
-          photoURL: photoURL?.trim() || "",
-          firebaseUid,
-          role: "user",
-        },
+        $set: updateFields,
         $setOnInsert: {
+          role: "user",
           isPremium: false,
           promptCount: 0,
         },

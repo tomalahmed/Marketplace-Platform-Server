@@ -1,5 +1,10 @@
 const Bookmark = require("../models/Bookmark.model");
 const Prompt = require("../models/Prompt.model");
+const User = require("../models/User.model");
+const {
+  sanitizePromptsForViewer,
+  enrichViewerFromRequest,
+} = require("../utils/promptVisibility");
 
 const isValidObjectId = (id) => id && /^[0-9a-fA-F]{24}$/.test(id);
 
@@ -85,9 +90,13 @@ exports.getMyBookmarks = async (req, res, next) => {
       Bookmark.countDocuments({ user: req.user.id }),
     ]);
 
-    const prompts = bookmarks
-      .map((entry) => entry.prompt)
-      .filter((prompt) => prompt && prompt.status === "approved");
+    const viewer = await enrichViewerFromRequest(req, User);
+    const prompts = sanitizePromptsForViewer(
+      bookmarks
+        .map((entry) => entry.prompt)
+        .filter((prompt) => prompt && prompt.status === "approved"),
+      viewer
+    );
 
     return res.status(200).json({
       success: true,
