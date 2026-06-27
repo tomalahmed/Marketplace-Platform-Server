@@ -4,24 +4,24 @@ const { validationResult } = require("express-validator");
 const User = require("../models/User.model");
 const generateToken = require("../utils/generateToken");
 const { verifyFirebaseIdToken } = require("../config/firebaseAdmin");
-const { isProduction } = require("../config/env");
 const { assertDemoLoginAllowed } = require("../utils/demoScope");
 
-const buildCookieOptions = () => {
-  const sameSite =
-    process.env.COOKIE_SAME_SITE ||
-    (isProduction ? "lax" : "lax");
+const buildCookieOptions = (req) => {
+  const sameSite = process.env.COOKIE_SAME_SITE || "lax";
+  const secure =
+    process.env.COOKIE_SECURE === "true" ||
+    (process.env.COOKIE_SECURE !== "false" && Boolean(req?.secure));
 
   return {
     httpOnly: true,
-    secure: isProduction,
+    secure,
     sameSite,
     path: "/",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   };
 };
 
-const sendAuthResponse = (res, user, statusCode = 200) => {
+const sendAuthResponse = (req, res, user, statusCode = 200) => {
   const token = generateToken({
     id: user._id,
     email: user.email,
@@ -33,7 +33,7 @@ const sendAuthResponse = (res, user, statusCode = 200) => {
 
   return res
     .status(statusCode)
-    .cookie("token", token, buildCookieOptions())
+    .cookie("token", token, buildCookieOptions(req))
     .json({
       success: true,
       message: "Authentication successful",
@@ -72,7 +72,7 @@ const register = async (req, res, next) => {
       role: "user",
     });
 
-    return sendAuthResponse(res, user, 201);
+    return sendAuthResponse(req, res, user, 201);
   } catch (error) {
     return next(error);
   }
@@ -113,7 +113,7 @@ const login = async (req, res, next) => {
     }
 
     user.password = undefined;
-    return sendAuthResponse(res, user);
+    return sendAuthResponse(req, res, user);
   } catch (error) {
     return next(error);
   }
@@ -121,7 +121,7 @@ const login = async (req, res, next) => {
 
 const logout = async (req, res) => {
   return res
-    .clearCookie("token", buildCookieOptions())
+    .clearCookie("token", buildCookieOptions(req))
     .status(200)
     .json({
       success: true,
@@ -216,7 +216,7 @@ const googleSync = async (req, res, next) => {
       }
     );
 
-    return sendAuthResponse(res, user, 200);
+    return sendAuthResponse(req, res, user, 200);
   } catch (error) {
     return next(error);
   }

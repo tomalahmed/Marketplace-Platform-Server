@@ -42,7 +42,7 @@ router.post(
     body("idToken").notEmpty().withMessage("idToken is required"),
     body("email").optional().isEmail().withMessage("Valid email is required").normalizeEmail(),
     body("name").optional().trim().notEmpty().withMessage("Name cannot be empty"),
-    body("photoURL").optional({ checkFalsy: true }).isURL().withMessage("PhotoURL must be a valid URL"),
+    body("photoURL").optional({ checkFalsy: true }).isString().withMessage("PhotoURL must be a string"),
   ],
   authController.googleSync
 );

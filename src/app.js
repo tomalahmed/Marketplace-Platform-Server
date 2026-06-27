@@ -21,7 +21,11 @@ app.set("trust proxy", 1);
 app.use(helmet());
 app.use(
   cors({
-    origin: (process.env.CLIENT_URL || "http://localhost:3000").replace(/\/$/, ""),
+    origin: [
+      (process.env.CLIENT_URL || "http://localhost:3000").replace(/\/$/, ""),
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+    ],
     credentials: true,
   })
 );
