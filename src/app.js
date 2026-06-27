@@ -40,6 +40,20 @@ app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 app.use(sanitizeInput);
 
+app.get("/", (req, res) => {
+  const clientUrl = (process.env.CLIENT_URL || "http://localhost:3000").replace(/\/$/, "");
+
+  res.status(200).json({
+    success: true,
+    message: "PromptGrowth API is running",
+    docs: {
+      health: "/api/health",
+      auth: "/api/auth",
+    },
+    client: clientUrl,
+  });
+});
+
 app.get("/api/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
