@@ -38,12 +38,7 @@ router.get("/me", verifyToken, authController.getMe);
 router.post(
   "/google-sync",
   authLimiter,
-  [
-    body("idToken").notEmpty().withMessage("idToken is required"),
-    body("email").optional().isEmail().withMessage("Valid email is required").normalizeEmail(),
-    body("name").optional().trim().notEmpty().withMessage("Name cannot be empty"),
-    body("photoURL").optional({ checkFalsy: true }).isString().withMessage("PhotoURL must be a string"),
-  ],
+  [body("idToken").notEmpty().withMessage("idToken is required")],
   authController.googleSync
 );
 

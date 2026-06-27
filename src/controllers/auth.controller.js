@@ -8,9 +8,18 @@ const { assertDemoLoginAllowed } = require("../utils/demoScope");
 
 const buildCookieOptions = (req) => {
   const sameSite = process.env.COOKIE_SAME_SITE || "lax";
-  const secure =
-    process.env.COOKIE_SECURE === "true" ||
-    (process.env.COOKIE_SECURE !== "false" && Boolean(req?.secure));
+
+  let secure = false;
+  if (process.env.COOKIE_SECURE === "true") {
+    secure = true;
+  } else if (process.env.COOKIE_SECURE !== "false") {
+    const forwardedProto = req?.headers?.["x-forwarded-proto"];
+    if (forwardedProto) {
+      secure = forwardedProto.split(",")[0].trim() === "https";
+    } else {
+      secure = Boolean(req?.secure);
+    }
+  }
 
   return {
     httpOnly: true,
@@ -160,7 +169,7 @@ const googleSync = async (req, res, next) => {
       });
     }
 
-    const { idToken, name, email, photoURL } = req.body;
+    const { idToken } = req.body;
 
     let decoded;
 
@@ -173,7 +182,7 @@ const googleSync = async (req, res, next) => {
       });
     }
 
-    const normalizedEmail = (decoded.email || email || "").trim().toLowerCase();
+    const normalizedEmail = (decoded.email || "").trim().toLowerCase();
     const firebaseUid = decoded.uid;
 
     if (!normalizedEmail || !firebaseUid) {
@@ -183,19 +192,12 @@ const googleSync = async (req, res, next) => {
       });
     }
 
-    if (email && email.trim().toLowerCase() !== normalizedEmail) {
-      return res.status(400).json({
-        success: false,
-        message: "Email does not match verified Google account",
-      });
-    }
-
     assertDemoLoginAllowed(normalizedEmail);
 
     const updateFields = {
-      name: (name || decoded.name || "User").trim(),
+      name: (decoded.name || "User").trim(),
       email: normalizedEmail,
-      photoURL: photoURL?.trim() || decoded.picture || "",
+      photoURL: decoded.picture || "",
       firebaseUid,
     };
 

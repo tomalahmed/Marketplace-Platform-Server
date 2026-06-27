@@ -2,3 +2,5 @@ node_modules
 .env
 .DS_Store
 marketplace_build_plan_34cead66.plan.md
+.gitignore
+gitignore
